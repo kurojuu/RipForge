@@ -1,5 +1,6 @@
 // gamestate.js
 import { UI } from "./ui.js";
+import { getUnlockedParts } from "./blades.js";
 
 export class GameState {
   constructor(player, enemies, effects, audio, announcer) {
@@ -8,26 +9,25 @@ export class GameState {
     this.effects = effects;
     this.audio = audio;
     this.announcer = announcer;
-    
     this.current = "launch";
     this.finished = false;
-
+    this.battleNumber = 1;
+    this.unlockedParts = [];
+    
     try {
-      if (this.announcer) {
-        this.announcer.intro(this.enemies?.list?.length || 0);
-      }
-    } catch (e) {
-      console.warn("Announcer intro failed:", e);
-    }
+      if (this.announcer) this.announcer.intro(this.enemies?.list?.length || 0);
+    } catch (e) {}
+  }
+
+  setBattleNumber(n) {
+    this.battleNumber = n;
   }
 
   start() {
     this.current = "battle";
     try {
       if (this.announcer) this.announcer.letItRip();
-    } catch (e) {
-      console.warn("Announcer letItRip failed:", e);
-    }
+    } catch (e) {}
   }
 
   isFinished() {
@@ -36,32 +36,21 @@ export class GameState {
 
   cleanup() {
     try { this.audio?.stopMotor?.(); } catch (e) {}
-    // REMOVED: effects.hideMessage() — it hides the #message element that UI.showEndScreen needs
-    if (this.player) this.player.rpm = 0;
+    if (this.player) this.player.hp = 0;
   }
 
   forceDefeat() {
-    console.error("[GameState] forceDefeat() called");
     this.cleanup();
     this.finished = true;
     this.current = "defeat";
-    
-    try {
-      if (this.announcer) this.announcer.defeat();
-    } catch (e) {}
-    
-    try {
-      UI.showEndScreen("DEFEAT", false);
-    } catch (e) {
-      console.error("[GameState] UI.showEndScreen failed:", e);
-    }
+    try { if (this.announcer) this.announcer.defeat(); } catch (e) {}
+    UI.showEndScreen("DEFEAT", false, this.battleNumber);
   }
 
   update() {
     if (this.current !== "battle" || this.finished) return;
 
-    if (this.player.rpm <= 1) {
-      console.log("[GameState] DEFEAT detected — player.rpm:", this.player.rpm);
+    if (this.player.hp <= 0) {
       this.forceDefeat();
       return;
     }
@@ -69,25 +58,23 @@ export class GameState {
     let activeEnemies = 0;
     if (this.enemies?.list) {
       for (const e of this.enemies.list) {
-        if (e.rpm > 1) activeEnemies++;
+        if (e.hp > 0) activeEnemies++;
       }
     }
 
     if (activeEnemies === 0) {
-      console.log("[GameState] VICTORY detected");
       this.cleanup();
       this.finished = true;
       this.current = "victory";
       
-      try {
-        if (this.announcer) this.announcer.victory();
-      } catch (e) {}
+      // Unlock new parts
+      const newParts = getUnlockedParts(this.battleNumber).filter(p => 
+        !this.unlockedParts.some(up => up.id === p.id)
+      );
+      this.unlockedParts.push(...newParts);
       
-      try {
-        UI.showEndScreen("VICTORY", true);
-      } catch (e) {
-        console.error("[GameState] UI.showEndScreen failed:", e);
-      }
+      try { if (this.announcer) this.announcer.victory(); } catch (e) {}
+      UI.showEndScreen("VICTORY", true, this.battleNumber, newParts);
     }
   }
 }
