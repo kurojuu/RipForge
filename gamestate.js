@@ -1,6 +1,6 @@
 // gamestate.js
 import { UI } from "./ui.js";
-import { getUnlockedParts } from "./blades.js";
+import { getPartsByTier } from "./blades.js";
 
 export class GameState {
   constructor(player, enemies, effects, audio, announcer) {
@@ -12,7 +12,7 @@ export class GameState {
     this.current = "launch";
     this.finished = false;
     this.battleNumber = 1;
-    this.unlockedParts = [];
+    this.unlockedTiers = new Set();
     
     try {
       if (this.announcer) this.announcer.intro(this.enemies?.list?.length || 0);
@@ -50,7 +50,6 @@ export class GameState {
   update() {
     if (this.current !== "battle" || this.finished) return;
 
-    // ABSOLUTE PRIORITY: if player is dead, it's always defeat
     if (this.player.hp <= 0) {
       this.forceDefeat();
       return;
@@ -63,19 +62,28 @@ export class GameState {
       }
     }
 
-    // Victory ONLY if player is alive AND all enemies dead
     if (activeEnemies === 0) {
       this.cleanup();
       this.finished = true;
       this.current = "victory";
       
-      const newParts = getUnlockedParts(this.battleNumber).filter(p => 
-        !this.unlockedParts.some(up => up.id === p.id)
-      );
-      this.unlockedParts.push(...newParts);
+      // Determine reward tier
+      let rewardTier = 1;
+      if (this.battleNumber >= 5) rewardTier = 3;
+      else if (this.battleNumber >= 3) rewardTier = 2;
+      
+      const isNewTier = !this.unlockedTiers.has(rewardTier);
+      this.unlockedTiers.add(rewardTier);
+      
+      const availableRewards = getPartsByTier(rewardTier);
+      // Pick 3 random from tier
+      const shuffled = [...availableRewards].sort(() => Math.random() - 0.5);
+      const choices = shuffled.slice(0, 3);
       
       try { if (this.announcer) this.announcer.victory(); } catch (e) {}
-      UI.showEndScreen("VICTORY", true, this.battleNumber, newParts);
+      UI.showRewardChoice(choices, rewardTier, () => {
+        UI.showEndScreen("VICTORY", true, this.battleNumber, [], isNewTier);
+      });
     }
   }
 }
