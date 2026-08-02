@@ -7,13 +7,12 @@ export class EnemyTop {
     this.mass = 1.1;
     this.radius = 0.6;
     
-    // Scale enemy stats with battle number
-    const scale = 1 + (battleNumber - 1) * 0.15;
+    const scale = 1 + (battleNumber - 1) * 0.12;
     this.stats = {
       att: Math.floor(45 * scale),
       def: Math.floor(40 * scale),
       agi: Math.floor(50 * scale),
-      hp: Math.floor(70 * scale)
+      hp: Math.floor(450 * scale)
     };
     
     this.hp = this.stats.hp;
@@ -63,14 +62,12 @@ export class EnemyTop {
       return;
     }
 
-    // AI movement toward player
     if (window.Game && window.Game.player && window.Game.player.hp > 0) {
       const pPos = window.Game.player.position;
       const dx = pPos.x - this.position.x;
       const dz = pPos.z - this.position.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
       
-      // Agi affects chase speed
       const agiMult = this.stats.agi / 50;
       
       if (dist > 0.1) {
@@ -98,7 +95,6 @@ export class EnemyManager {
     this.list = [];
     this.battleNumber = battleNumber;
     
-    // Spawn 1 enemy + 1 extra every 3 battles
     const count = 1 + Math.floor((battleNumber - 1) / 3);
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count;
