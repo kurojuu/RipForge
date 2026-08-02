@@ -11,14 +11,18 @@ export const UI = {
 
   init(player, enemies) {
     const hud = document.getElementById("hud");
-    if (!hud) return;
+    if (!hud) {
+      console.error("[UI] hud element not found!");
+      return;
+    }
+    
     hud.innerHTML = `
       <div style="position:absolute;top:20px;left:20px;background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;color:#fff;font-family:sans-serif;min-width:160px;">
         <div style="font-size:12px;font-weight:bold;margin-bottom:5px;letter-spacing:1px;">YOUR HP</div>
         <div style="width:100%;background:#333;height:12px;border-radius:6px;overflow:hidden;margin-bottom:5px;">
           <div id="pBar" style="width:100%;background:#00e676;height:100%;transition:width 0.1s ease;"></div>
         </div>
-        <div id="pRPM" style="font-size:16px;font-weight:bold;">0 HP</div>
+        <div id="pRPM" style="font-size:16px;font-weight:bold;">0 / 0 HP</div>
         <div id="pStats" style="font-size:10px;color:#aaa;margin-top:4px;"></div>
       </div>
       <div id="enemyUi" style="position:absolute;top:20px;right:20px;display:flex;flex-direction:column;gap:10px;background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;color:#fff;font-family:sans-serif;min-width:160px;">
@@ -30,6 +34,10 @@ export const UI = {
     this.enemyContainer = document.getElementById("enemyUi");
     this.messageEl = document.getElementById("message");
     this.playerStats = document.getElementById("pStats");
+
+    if (!this.messageEl) {
+      console.error("[UI] message element not found!");
+    }
 
     this.buildEnemyUI(enemies.list);
   },
@@ -45,7 +53,7 @@ export const UI = {
         <div style="width:100%;background:#333;height:12px;border-radius:6px;overflow:hidden;margin-bottom:5px;">
           <div id="eBar-${idx}" style="width:100%;background:#ff3d00;height:100%;transition:width 0.1s ease;"></div>
         </div>
-        <div id="eRPM-${idx}" style="font-size:14px;font-weight:bold;">0 HP</div>
+        <div id="eRPM-${idx}" style="font-size:14px;font-weight:bold;">0 / 0 HP</div>
       `;
       this.enemyContainer.appendChild(item);
     });
@@ -58,7 +66,6 @@ export const UI = {
     this.playerBar.style.width = `${pPct}%`;
     this.playerRPMText.innerText = `${Math.floor(Game.player.hp)} / ${Game.player.maxHp} HP`;
     
-    // Show stats
     if (this.playerStats && Game.player.stats) {
       const s = Game.player.stats;
       this.playerStats.innerText = `ATT:${s.att} DEF:${s.def} AGI:${s.agi}`;
@@ -75,7 +82,7 @@ export const UI = {
         if (eBar && eRPM) {
           const ePct = Math.max(0, e.hp / e.maxHp) * 100;
           eBar.style.width = `${ePct}%`;
-          eRPM.innerText = `${Math.floor(e.hp)} HP`;
+          eRPM.innerText = `${Math.floor(e.hp)} / ${e.maxHp} HP`;
           if (e.hp <= 0) {
             const box = document.getElementById(`e-box-${idx}`);
             if (box) box.style.opacity = "0.4";
@@ -85,7 +92,6 @@ export const UI = {
     }
   },
 
-  // Blade Selection Screen
   showBladeSelect(onSelect) {
     if (!this.messageEl) return;
     this.messageEl.style.display = "block";
@@ -104,8 +110,9 @@ export const UI = {
         border-radius:10px;padding:15px;cursor:pointer;text-align:left;
         transition:all 0.2s;
       `;
+      const hexColor = "#" + blade.color.toString(16).padStart(6, '0');
       card.innerHTML = `
-        <div style="font-size:18px;font-weight:bold;color:#${blade.color.toString(16).padStart(6,'0')};">${blade.name}</div>
+        <div style="font-size:18px;font-weight:bold;color:${hexColor};">${blade.name}</div>
         <div style="font-size:11px;color:#aaa;margin:4px 0;">${blade.desc}</div>
         <div style="font-size:12px;color:#fff;">
           ATT: ${blade.baseStats.att} | DEF: ${blade.baseStats.def} | AGI: ${blade.baseStats.agi} | HP: ${blade.baseStats.hp}
@@ -123,7 +130,6 @@ export const UI = {
     });
   },
 
-  // Part Customization Screen
   showPartShop(player, battleNumber, onDone) {
     if (!this.messageEl) return;
     const unlocked = getUnlockedParts(battleNumber);
@@ -159,7 +165,6 @@ export const UI = {
         slotsDiv.appendChild(row);
       }
       
-      // Bind unequip buttons
       document.querySelectorAll(".unequip-btn").forEach(btn => {
         btn.onclick = () => {
           player.unequipPart(btn.dataset.slot);
@@ -180,7 +185,6 @@ export const UI = {
         btn.style.cssText = "padding:8px 14px;font-size:12px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;";
         btn.innerText = `${part.name}\n+${part.bonus} ${PART_SLOTS[part.slot].stat.toUpperCase()}`;
         btn.onclick = () => {
-          // Unequip current part in that slot first
           player.equipPart(part);
           renderSlots();
           renderInventory();
@@ -256,7 +260,6 @@ export const UI = {
     if (isVictory) {
       document.getElementById("customizeBtn").onclick = () => {
         this.showPartShop(window.Game.player, battleNumber, () => {
-          // Return to end screen after customizing
           this.endScreenShown = false;
           this.showEndScreen(text, isVictory, battleNumber, []);
         });
