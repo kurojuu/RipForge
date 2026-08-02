@@ -20,9 +20,9 @@ export class EnemyTop {
             hp: Math.floor(600 * finalScale)
         };
 
-        // NEW — enemy RPM scales to player, slightly harder each battle:
+        // NEW:
         const playerMaxRPM = window.Game?.player?.maxRPM || 4000;
-        const difficultyMult = 1.0 + (battleNumber - 1) * 0.08; // +8% per battle
+        const difficultyMult = 1.0 + (battleNumber - 1) * 0.08;
         this.maxRPM = Math.floor(playerMaxRPM * difficultyMult);
         this.rpm = this.maxRPM;
 
@@ -130,20 +130,20 @@ export class EnemyManager {
         this.list = [];
         this.battleNumber = battleNumber;
 
-        const playerStats = player ? {
-            att: player.stats.att,
-            def: player.stats.def,
-            agi: player.stats.agi,
-            hp: player.stats.hp
-        } : null;
+    const playerStats = player ? {
+        att: player.stats.att,
+        def: player.stats.def,
+        agi: player.stats.agi,
+        hp: player.stats.hp
+    } : null;
 
-        const count = 1 + Math.floor((battleNumber - 1) / 3);
-        for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 * i) / count;
-            const r = 6;
-            this.list.push(new EnemyTop(this.scene, Math.cos(angle) * r, Math.sin(angle) * r, battleNumber, playerStats));
-        }
+    const count = 1 + Math.floor((battleNumber - 1) / 3);
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const r = 6;
+        this.list.push(new EnemyTop(this.scene, Math.cos(angle) * r, Math.sin(angle) * r, battleNumber, playerStats));
     }
+}
 
     update(dt) {
         this.list.forEach(enemy => {
