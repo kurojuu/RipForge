@@ -7,12 +7,12 @@ export class EnemyTop {
     this.mass = 1.1;
     this.radius = 0.6;
     
-    const scale = 1 + (battleNumber - 1) * 0.12;
+    const scale = 1 + (battleNumber - 1) * 0.15;
     this.stats = {
-      att: Math.floor(45 * scale),
-      def: Math.floor(40 * scale),
-      agi: Math.floor(50 * scale),
-      hp: Math.floor(450 * scale)
+      att: Math.floor(50 * scale),
+      def: Math.floor(45 * scale),
+      agi: Math.floor(55 * scale),
+      hp: Math.floor(500 * scale)
     };
     
     this.hp = this.stats.hp;
@@ -71,8 +71,15 @@ export class EnemyTop {
       const agiMult = this.stats.agi / 50;
       
       if (dist > 0.1) {
-        this.vel.x += (dx / dist) * 8.5 * agiMult * dt;
-        this.vel.z += (dz / dist) * 8.5 * agiMult * dt;
+        // Chase player
+        this.vel.x += (dx / dist) * 10 * agiMult * dt;
+        this.vel.z += (dz / dist) * 10 * agiMult * dt;
+      }
+      
+      // If close, try to circle around for better angle (harder to dodge)
+      if (dist < 3 && dist > 0.1) {
+        this.vel.x += (-dz / dist) * 4 * agiMult * dt;
+        this.vel.z += (dx / dist) * 4 * agiMult * dt;
       }
     }
 
