@@ -49,21 +49,18 @@ export const PART_SLOTS = {
 };
 
 export const PARTS_DB = [
-  // Tier 1 (Battle 1)
   { id: "p_launcher_1", slot: "launcher", name: "Steel Launcher", bonus: 12, tier: 1, color: 0x888888 },
   { id: "p_reel_1", slot: "launcherReel", name: "Quick Reel", bonus: 10, tier: 1, color: 0x4488ff },
   { id: "p_attRing_1", slot: "attackRing", name: "Spike Ring", bonus: 14, tier: 1, color: 0xff4444 },
   { id: "p_defRing_1", slot: "defenseRing", name: "Plate Ring", bonus: 16, tier: 1, color: 0x44ff44 },
   { id: "p_gyro_1", slot: "gyro", name: "Heavy Gyro", bonus: 80, tier: 1, color: 0xffaa00 },
   
-  // Tier 2 (Battle 3)
   { id: "p_launcher_2", slot: "launcher", name: "Titan Launcher", bonus: 22, tier: 2, color: 0xaaaaaa },
   { id: "p_reel_2", slot: "launcherReel", name: "Turbo Reel", bonus: 18, tier: 2, color: 0x2266dd },
   { id: "p_attRing_2", slot: "attackRing", name: "Saw Ring", bonus: 24, tier: 2, color: 0xdd2222 },
   { id: "p_defRing_2", slot: "defenseRing", name: "Titanium Ring", bonus: 26, tier: 2, color: 0x22dd22 },
   { id: "p_gyro_2", slot: "gyro", name: "Diamond Gyro", bonus: 140, tier: 2, color: 0xdddd00 },
   
-  // Tier 3 (Battle 5)
   { id: "p_launcher_3", slot: "launcher", name: "Omega Launcher", bonus: 38, tier: 3, color: 0xcccccc },
   { id: "p_reel_3", slot: "launcherReel", name: "Phantom Reel", bonus: 32, tier: 3, color: 0x1144aa },
   { id: "p_attRing_3", slot: "attackRing", name: "Void Ring", bonus: 40, tier: 3, color: 0xaa1111 },
@@ -83,19 +80,4 @@ export function calculateStats(blade, equippedParts) {
     }
   }
   return stats;
-}
-
-export function getTotalStats(player) {
-  return calculateStats(player.blade, player.equippedParts);
-}
-
-export function getStatDiff(blade, currentParts, slot, newPart) {
-  const current = calculateStats(blade, currentParts);
-  const testParts = { ...currentParts, [slot]: newPart };
-  const next = calculateStats(blade, testParts);
-  const diff = {};
-  for (const k of Object.keys(current)) {
-    diff[k] = next[k] - current[k];
-  }
-  return diff;
 }
