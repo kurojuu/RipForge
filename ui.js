@@ -19,18 +19,17 @@ export const UI = {
       console.error("[UI] hud element not found!");
       return;
     }
-    
+
     hud.innerHTML = `
-      <div style="position:absolute;top:20px;left:20px;background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;color:#fff;font-family:sans-serif;min-width:160px;">
-        <div style="font-size:12px;font-weight:bold;margin-bottom:5px;letter-spacing:1px;">YOUR HP</div>
-        <div style="width:100%;background:#333;height:12px;border-radius:6px;overflow:hidden;margin-bottom:5px;">
-          <div id="pBar" style="width:100%;background:#00e676;height:100%;transition:width 0.1s ease;"></div>
+      <div class="panel" id="playerBox" style="min-width:160px;">
+        <div style="font-size:11px;font-weight:bold;letter-spacing:1px;color:#aaa;">YOUR RPM</div>
+        <div class="bar" style="margin-top:6px;height:10px;border-radius:10px;background:#333;overflow:hidden;">
+          <div id="pBar" style="width:100%;height:100%;background:#00e676;transition:width .15s linear,background .2s linear;"></div>
         </div>
-        <div id="pRPM" style="font-size:16px;font-weight:bold;">0 / 0 HP</div>
-        <div id="pStats" style="font-size:10px;color:#aaa;margin-top:4px;"></div>
+        <div id="pRPM" style="margin-top:5px;font-size:13px;font-weight:bold;">0 / 0 RPM</div>
+        <div id="pStats" style="margin-top:4px;font-size:10px;color:#aaa;"></div>
       </div>
-      <div id="enemyUi" style="position:absolute;top:20px;right:20px;display:flex;flex-direction:column;gap:10px;background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;color:#fff;font-family:sans-serif;min-width:160px;">
-      </div>
+      <div id="enemyUi" style="display:flex;flex-direction:column;gap:8px;"></div>
     `;
 
     this.playerRPMText = document.getElementById("pRPM");
@@ -52,12 +51,14 @@ export const UI = {
     enemyList.forEach((e, idx) => {
       const item = document.createElement("div");
       item.id = `e-box-${idx}`;
+      item.className = "panel";
+      item.style.cssText = "min-width:140px;";
       item.innerHTML = `
-        <div style="font-size:12px;font-weight:bold;margin-bottom:5px;letter-spacing:1px;">ENEMY ${idx + 1}</div>
-        <div style="width:100%;background:#333;height:12px;border-radius:6px;overflow:hidden;margin-bottom:5px;">
-          <div id="eBar-${idx}" style="width:100%;background:#ff3d00;height:100%;transition:width 0.1s ease;"></div>
+        <div style="font-size:11px;font-weight:bold;letter-spacing:1px;color:#aaa;">ENEMY ${idx + 1}</div>
+        <div class="bar" style="margin-top:6px;height:10px;border-radius:10px;background:#333;overflow:hidden;">
+          <div id="eBar-${idx}" style="width:100%;height:100%;background:#ff3d00;transition:width .15s linear,background .2s linear;"></div>
         </div>
-        <div id="eRPM-${idx}" style="font-size:14px;font-weight:bold;">0 / 0 HP</div>
+        <div id="eRPM-${idx}" style="margin-top:5px;font-size:13px;font-weight:bold;">0 / 0 RPM</div>
       `;
       this.enemyContainer.appendChild(item);
     });
@@ -65,18 +66,18 @@ export const UI = {
 
   update() {
     if (!Game.player || !this.playerBar || !this.playerRPMText) return;
-    
-    const pPct = Math.max(0, Game.player.hp / Game.player.maxHp) * 100;
+
+    const pPct = Math.max(0, Game.player.rpm / Game.player.maxRPM) * 100;
     this.playerBar.style.width = `${pPct}%`;
-    this.playerRPMText.innerText = `${Math.floor(Game.player.hp)} / ${Game.player.maxHp} HP`;
-    
+    this.playerRPMText.innerText = `${Math.floor(Game.player.rpm)} / ${Game.player.maxRPM} RPM`;
+
     if (this.playerStats && Game.player.stats) {
       const s = Game.player.stats;
-      this.playerStats.innerText = `ATT:${s.att} DEF:${s.def} AGI:${s.agi} HP:${s.hp}`;
+      this.playerStats.innerText = `ATT:${s.att} DEF:${s.def} AGI:${s.agi}`;
     }
 
-    if (pPct < 30) this.playerBar.style.background = "#ff3d00";
-    else if (pPct < 60) this.playerBar.style.background = "#ffea00";
+    if (pPct < 15) this.playerBar.style.background = "#ff3d00";
+    else if (pPct < 40) this.playerBar.style.background = "#ffea00";
     else this.playerBar.style.background = "#00e676";
 
     if (Game.enemies?.list) {
@@ -84,13 +85,16 @@ export const UI = {
         const eBar = document.getElementById(`eBar-${idx}`);
         const eRPM = document.getElementById(`eRPM-${idx}`);
         if (eBar && eRPM) {
-          const ePct = Math.max(0, e.hp / e.maxHp) * 100;
+          const ePct = Math.max(0, e.rpm / e.maxRPM) * 100;
           eBar.style.width = `${ePct}%`;
-          eRPM.innerText = `${Math.floor(e.hp)} / ${e.maxHp} HP`;
-          if (e.hp <= 0) {
+          eRPM.innerText = `${Math.floor(e.rpm)} / ${e.maxRPM} RPM`;
+          if (e.rpm <= 0) {
             const box = document.getElementById(`e-box-${idx}`);
             if (box) box.style.opacity = "0.4";
           }
+          if (ePct < 15) eBar.style.background = "#ff3d00";
+          else if (ePct < 40) eBar.style.background = "#ffea00";
+          else eBar.style.background = "#ff3d00";
         }
       });
     }
