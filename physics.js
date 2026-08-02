@@ -1,14 +1,13 @@
 // physics.js
 import * as THREE from "./three.module.js";
+import { applyMoveEffects } from "./moves.js";
 
 export class Physics {
   constructor(player, enemies) {
     this.player = player;
     this.enemies = enemies;
-    
-    this.arenaRadius = 14.0; 
+    this.arenaRadius = 14.0;
     this.reboundElasticity = 0.75;
-    
     this.particles = null;
     this.audio = null;
     this.announcer = null;
@@ -22,27 +21,61 @@ export class Physics {
     this.replay = managers.replay;
   }
 
-  update(dt) {
-    // Structural Guard: Exit if player instance is broken or already dead
-    
+  resolveCollision(attacker, defender, nx, nz, velAlongNormal) {
+    const impulse = -(1 + 0.85) * velAlongNormal / (1 / attacker.mass + 1 / defender.mass);
+    attacker.vel.x -= (impulse / attacker.mass) * nx;
+    attacker.vel.z -= (impulse / attacker.mass) * nz;
+    defender.vel.x += (impulse / defender.mass) * nx;
+    defender.vel.z += (impulse / defender.mass) * nz;
 
-    if (!this.player || !this.player.position) {
-    return;
+    // Base damage from impact
+    const baseDamage = Math.abs(velAlongNormal) * 140 + 250;
+    
+    // Apply stats: Att increases damage, Def reduces it
+    const attMult = attacker.stats.att / 50;
+    const defMult = 50 / (50 + defender.stats.def);
+    let rawDamage = baseDamage * attMult * defMult;
+    
+    // Apply move effects
+    const result = applyMoveEffects(attacker, defender, rawDamage);
+    const finalDamage = result.damage;
+    
+    // Show move effect text
+    if (result.effects.length > 0 && this.announcer) {
+      // Could show floating text here
+      console.log(`[MOVE] ${result.moveName}: ${result.effects.join(", ")}`);
+    }
+    
+    defender.takeDamage(finalDamage);
+    attacker.takeDamage(finalDamage * 0.3); // Recoil damage
+
+    if (this.audio) this.audio.playHit(false);
+    
+    if (this.particles && attacker.hp > 0 && defender.hp > 0) {
+      const midPoint = new THREE.Vector3(
+        (attacker.position.x + defender.position.x) * 0.5,
+        0.3,
+        (attacker.position.z + defender.position.z) * 0.5
+      );
+      this.particles.emitSparks(midPoint);
+    }
+    
+    if (this.announcer) this.announcer.bigHit();
   }
 
-    let isPlayerGrinding = false;
+  update(dt) {
+    if (!this.player || !this.player.position) return;
 
-    // 1. Player Boundary Resolution Loop
+    let isPlayerGrinding = false;
     this.player.position.y = 0.3;
-    const pDist = Math.sqrt(this.player.position.x * this.player.position.x + this.player.position.z * this.player.position.z);
+    
+    const pDist = Math.sqrt(this.player.position.x ** 2 + this.player.position.z ** 2);
     const pEffRadius = this.arenaRadius - this.player.radius;
 
     if (pDist > pEffRadius) {
       isPlayerGrinding = true;
-
       const nx = this.player.position.x / (pDist || 1);
       const nz = this.player.position.z / (pDist || 1);
-
       this.player.position.x = nx * pEffRadius;
       this.player.position.z = nz * pEffRadius;
 
@@ -50,46 +83,36 @@ export class Physics {
       if (dot > 0) {
         this.player.vel.x -= (1 + this.reboundElasticity) * dot * nx;
         this.player.vel.z -= (1 + this.reboundElasticity) * dot * nz;
-        
-        if (this.audio && typeof this.audio.playHit === 'function') {
-          this.audio.playHit(true);
-        }
+        if (this.audio) this.audio.playHit(true);
       }
 
-      this.player.rpm = Math.max(0, this.player.rpm - 180 * dt);
+      // Wall damage scales with def (less def = more wall damage)
+      const wallDamage = 180 * dt * (50 / (50 + this.player.stats.def));
+      this.player.takeDamage(wallDamage);
 
-      if (this.audio && typeof this.audio.startGrind === 'function' && this.player.rpm > 0) {
-        this.audio.startGrind();
-      }
-      if (this.particles && this.player.rpm > 0) {
-        const wallContact = new THREE.Vector3(this.player.position.x, 0.3, this.player.position.z);
-        this.particles.emitSparks(wallContact);
+      if (this.audio && this.player.hp > 0) this.audio.startGrind();
+      if (this.particles && this.player.hp > 0) {
+        this.particles.emitSparks(new THREE.Vector3(this.player.position.x, 0.3, this.player.position.z));
       }
     }
 
-    if (!isPlayerGrinding || this.player.rpm <= 0) {
-      if (this.audio && typeof this.audio.stopGrind === 'function') {
-        this.audio.stopGrind();
-      }
+    if (!isPlayerGrinding || this.player.hp <= 0) {
+      if (this.audio) this.audio.stopGrind();
     }
 
-    // 2. Enemy Processing Loop
-    if (this.enemies && this.enemies.list) {
+    // Enemy processing
+    if (this.enemies?.list) {
       for (let i = 0; i < this.enemies.list.length; i++) {
         const enemy = this.enemies.list[i];
-        
-        // Skip dead or missing enemies immediately
-        if (!enemy || !enemy.position || typeof enemy.rpm === 'undefined' || enemy.rpm <= 0) continue;
+        if (!enemy || !enemy.position || enemy.hp <= 0) continue;
 
         enemy.position.y = 0.3;
-
-        const eDist = Math.sqrt(enemy.position.x * enemy.position.x + enemy.position.z * enemy.position.z);
+        const eDist = Math.sqrt(enemy.position.x ** 2 + enemy.position.z ** 2);
         const eEffRadius = this.arenaRadius - enemy.radius;
 
         if (eDist > eEffRadius) {
           const enx = enemy.position.x / (eDist || 1);
           const enz = enemy.position.z / (eDist || 1);
-
           enemy.position.x = enx * eEffRadius;
           enemy.position.z = enz * eEffRadius;
 
@@ -97,22 +120,19 @@ export class Physics {
           if (edot > 0) {
             enemy.vel.x -= (1 + this.reboundElasticity) * edot * enx;
             enemy.vel.z -= (1 + this.reboundElasticity) * edot * enz;
-            
-            if (this.audio && typeof this.audio.playHit === 'function') {
-              this.audio.playHit(true);
-            }
+            if (this.audio) this.audio.playHit(true);
           }
 
-          enemy.rpm = Math.max(0, enemy.rpm - 180 * dt);
+          const wallDamage = 180 * dt * (50 / (50 + enemy.stats.def));
+          enemy.takeDamage(wallDamage);
 
-          if (this.particles && enemy.rpm > 0) {
-            const eWallContact = new THREE.Vector3(enemy.position.x, 0.3, enemy.position.z);
-            this.particles.emitSparks(eWallContact);
+          if (this.particles && enemy.hp > 0) {
+            this.particles.emitSparks(new THREE.Vector3(enemy.position.x, 0.3, enemy.position.z));
           }
         }
 
-        // 3. Blade-on-Blade Inter-Top Collision
-        if (this.player.rpm > 0 && enemy.rpm > 0) {
+        // Player-Enemy collision
+        if (this.player.hp > 0 && enemy.hp > 0) {
           const dx = enemy.position.x - this.player.position.x;
           const dz = enemy.position.z - this.player.position.z;
           const dist = Math.sqrt(dx * dx + dz * dz);
@@ -121,8 +141,8 @@ export class Physics {
           if (dist < minDist) {
             const nx = dx / (dist || 1);
             const nz = dz / (dist || 1);
-
             const overlap = minDist - dist;
+            
             this.player.position.x -= nx * overlap * 0.5;
             this.player.position.z -= nz * overlap * 0.5;
             enemy.position.x += nx * overlap * 0.5;
@@ -133,29 +153,7 @@ export class Physics {
             const velAlongNormal = rvx * nx + rvz * nz;
 
             if (velAlongNormal < 0) {
-              const impulse = -(1 + 0.85) * velAlongNormal / (1 / this.player.mass + 1 / enemy.mass);
-
-              this.player.vel.x -= (impulse / this.player.mass) * nx;
-              this.player.vel.z -= (impulse / this.player.mass) * nz;
-              enemy.vel.x += (impulse / enemy.mass) * nx;
-              enemy.vel.z += (impulse / enemy.mass) * nz;
-
-              const baseDamage = Math.abs(velAlongNormal) * 140 + 250;
-              this.player.rpm = Math.max(0, this.player.rpm - baseDamage);
-              enemy.rpm = Math.max(0, enemy.rpm - baseDamage);
-
-              if (this.audio && typeof this.audio.playHit === 'function') {
-                this.audio.playHit(false);
-              }
-              if (this.particles && this.player.rpm > 0 && enemy.rpm > 0) {
-                const midPoint = new THREE.Vector3(
-                  (this.player.position.x + enemy.position.x) * 0.5,
-                  0.3,
-                  (this.player.position.z + enemy.position.z) * 0.5
-                );
-                this.particles.emitSparks(midPoint);
-              }
-              if (this.announcer) this.announcer.bigHit();
+              this.resolveCollision(this.player, enemy, nx, nz, velAlongNormal);
             }
           }
         }
