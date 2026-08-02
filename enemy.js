@@ -20,7 +20,10 @@ export class EnemyTop {
             hp: Math.floor(600 * finalScale)
         };
 
-        this.maxRPM = this.stats.hp * 15;
+        // NEW — enemy RPM scales to player, slightly harder each battle:
+        const playerMaxRPM = window.Game?.player?.maxRPM || 4000;
+        const difficultyMult = 1.0 + (battleNumber - 1) * 0.08; // +8% per battle
+        this.maxRPM = Math.floor(playerMaxRPM * difficultyMult);
         this.rpm = this.maxRPM;
 
         this.position = new THREE.Vector3(startX, 0.3, startZ);
