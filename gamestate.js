@@ -67,7 +67,6 @@ export class GameState {
       this.finished = true;
       this.current = "victory";
       
-      // Determine reward tier
       let rewardTier = 1;
       if (this.battleNumber >= 5) rewardTier = 3;
       else if (this.battleNumber >= 3) rewardTier = 2;
@@ -76,7 +75,6 @@ export class GameState {
       this.unlockedTiers.add(rewardTier);
       
       const availableRewards = getPartsByTier(rewardTier);
-      // Pick 3 random from tier
       const shuffled = [...availableRewards].sort(() => Math.random() - 0.5);
       const choices = shuffled.slice(0, 3);
       
