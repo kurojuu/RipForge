@@ -1,7 +1,8 @@
 // constants.js
 // NEW FILE
 // Shared gameplay constants.
-
+// constants.js
+export const PROJECT_NAME = "RipForge";
 export const GAME={
 
 ARENA_RADIUS:7.2,
