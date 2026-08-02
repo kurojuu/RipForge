@@ -49,15 +49,16 @@ export class GameState {
     update() {
         if (this.current !== "battle" || this.finished) return;
 
-        if (this.player.rpm <= 0) {
+        // In update():
+        if (this.player.rpm <= 0) {  // was: this.player.hp <= 0
             this.forceDefeat();
             return;
         }
-
+        
         let activeEnemies = 0;
         if (this.enemies?.list) {
             for (const e of this.enemies.list) {
-                if (e.rpm > 0) activeEnemies++;
+                if (e.rpm > 0) activeEnemies++;  // was: e.hp > 0
             }
         }
 
