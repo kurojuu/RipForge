@@ -98,7 +98,7 @@ export class EnemyTop {
       const agiMult = this.stats.agi / 50;
       
       if (dist > 0.1) {
-        this.vel.x += (dx / dist) * 10 * agiMult * dt;
+        this.vel.x += (dx / dist) * 12 * agiMult * dt;
         this.vel.z += (dz / dist) * 10 * agiMult * dt;
       }
       
