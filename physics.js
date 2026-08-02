@@ -21,48 +21,60 @@ export class Physics {
     this.replay = managers.replay;
   }
 
-  resolveCollision(attacker, defender, nx, nz, velAlongNormal) {
-    const impulse = -(1 + 0.85) * velAlongNormal / (1 / attacker.mass + 1 / defender.mass);
-    attacker.vel.x -= (impulse / attacker.mass) * nx;
-    attacker.vel.z -= (impulse / attacker.mass) * nz;
-    defender.vel.x += (impulse / defender.mass) * nx;
-    defender.vel.z += (impulse / defender.mass) * nz;
+  resolveCollision(a, b, nx, nz, velAlongNormal) {
+    // Physics impulse (unchanged)
+    const impulse = -(1 + 0.85) * velAlongNormal / (1 / a.mass + 1 / b.mass);
+    a.vel.x -= (impulse / a.mass) * nx;
+    a.vel.z -= (impulse / a.mass) * nz;
+    b.vel.x += (impulse / b.mass) * nx;
+    b.vel.z += (impulse / b.mass) * nz;
 
-    // INCREASED base damage for faster fights
-    const baseDamage = Math.abs(velAlongNormal) * 45 + 55;
-    
-    const attMult = attacker.stats.att / 50;
-    const defMult = 50 / (50 + defender.stats.def);
-    let rawDamage = baseDamage * attMult * defMult;
-    
-    // Charge multiplier
-    const chargeSpeed = Math.max(0, attacker.vel.x * nx + attacker.vel.z * nz);
-    const chargeMult = 1 + (chargeSpeed * 0.05);
-    rawDamage *= chargeMult;
-    
-    const result = applyMoveEffects(attacker, defender, rawDamage);
-    const finalDamage = result.damage;
-    
-    if (result.effects.length > 0) {
-      console.log(`[MOVE] ${result.moveName}: ${result.effects.join(", ")}`);
+    // Much lower base damage — fights should last ~15-25 hits, not 2-3
+    const speed = Math.abs(velAlongNormal);
+    const baseDamage = speed * 10 + 12;
+
+    // Each deals damage to the OTHER based on their OWN attack vs opponent's defense
+    const dmgAtoB = this._calcCollisionDamage(a, b, baseDamage, nx, nz);
+    const dmgBtoA = this._calcCollisionDamage(b, a, baseDamage, nx, nz);
+
+    // Apply move effects for both
+    const resultA = applyMoveEffects(a, b, dmgAtoB);
+    const resultB = applyMoveEffects(b, a, dmgBtoA);
+
+    b.takeDamage(resultA.damage);
+    a.takeDamage(resultB.damage);
+
+    if (resultA.effects.length > 0) {
+        console.log(`[MOVE] ${resultA.moveName}: ${resultA.effects.join(", ")}`);
     }
-    
-    defender.takeDamage(finalDamage);
-    attacker.takeDamage(finalDamage * 0.35); // Slightly higher recoil
+    if (resultB.effects.length > 0) {
+        console.log(`[MOVE] ${resultB.moveName}: ${resultB.effects.join(", ")}`);
+    }
 
     if (this.audio) this.audio.playHit(false);
-    
-    if (this.particles && attacker.hp > 0 && defender.hp > 0) {
-      const midPoint = new THREE.Vector3(
-        (attacker.position.x + defender.position.x) * 0.5,
-        0.3,
-        (attacker.position.z + defender.position.z) * 0.5
-      );
-      this.particles.emitSparks(midPoint);
+
+    if (this.particles && a.hp > 0 && b.hp > 0) {
+        const midPoint = new THREE.Vector3(
+            (a.position.x + b.position.x) * 0.5, 0.3,
+            (a.position.z + b.position.z) * 0.5
+        );
+        this.particles.emitSparks(midPoint);
     }
-    
+
     if (this.announcer) this.announcer.bigHit();
-  }
+}
+
+_calcCollisionDamage(attacker, defender, baseDamage, nx, nz) {
+    const attMult = attacker.stats.att / 50;
+    const defMult = 50 / (50 + defender.stats.def);
+    let damage = baseDamage * attMult * defMult;
+
+    const chargeSpeed = Math.max(0, attacker.vel.x * nx + attacker.vel.z * nz);
+    const chargeMult = 1 + (chargeSpeed * 0.04);
+    damage *= chargeMult;
+
+    return damage;
+}
 
   update(dt) {
     if (!this.player || !this.player.position) return;
