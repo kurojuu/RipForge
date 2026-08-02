@@ -28,29 +28,27 @@ export class Physics {
     defender.vel.x += (impulse / defender.mass) * nx;
     defender.vel.z += (impulse / defender.mass) * nz;
 
-    // Base damage reduced for longer battles
-    const baseDamage = Math.abs(velAlongNormal) * 25 + 35;
+    // INCREASED base damage for faster fights
+    const baseDamage = Math.abs(velAlongNormal) * 45 + 55;
     
-    // Stats
     const attMult = attacker.stats.att / 50;
     const defMult = 50 / (50 + defender.stats.def);
     let rawDamage = baseDamage * attMult * defMult;
     
-    // CHARGE MULTIPLIER: if attacker is moving toward defender, bonus damage
+    // Charge multiplier
     const chargeSpeed = Math.max(0, attacker.vel.x * nx + attacker.vel.z * nz);
-    const chargeMult = 1 + (chargeSpeed * 0.04); // up to ~1.4x at high speed
+    const chargeMult = 1 + (chargeSpeed * 0.05);
     rawDamage *= chargeMult;
     
-    // Apply move effects
     const result = applyMoveEffects(attacker, defender, rawDamage);
     const finalDamage = result.damage;
     
-    if (result.effects.length > 0 && this.announcer) {
+    if (result.effects.length > 0) {
       console.log(`[MOVE] ${result.moveName}: ${result.effects.join(", ")}`);
     }
     
     defender.takeDamage(finalDamage);
-    attacker.takeDamage(finalDamage * 0.25); // Reduced recoil
+    attacker.takeDamage(finalDamage * 0.35); // Slightly higher recoil
 
     if (this.audio) this.audio.playHit(false);
     
@@ -89,10 +87,9 @@ export class Physics {
         if (this.audio) this.audio.playHit(true);
       }
 
-      // WALL DAMAGE: extra if moving fast (missed charge)
       const speed = Math.sqrt(this.player.vel.x**2 + this.player.vel.z**2);
       const isCharging = speed > 4;
-      const baseWallDmg = isCharging ? (25 + speed * 6) : 8;
+      const baseWallDmg = isCharging ? (30 + speed * 5) : 12;
       const wallDamage = baseWallDmg * dt * (50 / (50 + this.player.stats.def));
       
       this.player.takeDamage(wallDamage);
@@ -107,7 +104,6 @@ export class Physics {
       if (this.audio) this.audio.stopGrind();
     }
 
-    // Enemy processing
     if (this.enemies?.list) {
       for (let i = 0; i < this.enemies.list.length; i++) {
         const enemy = this.enemies.list[i];
@@ -116,6 +112,15 @@ export class Physics {
         enemy.position.y = 0.3;
         const eDist = Math.sqrt(enemy.position.x ** 2 + enemy.position.z ** 2);
         const eEffRadius = this.arenaRadius - enemy.radius;
+
+        // ENEMY WALL AVOIDANCE: steer away from walls when close
+        const wallProximity = eDist / eEffRadius;
+        if (wallProximity > 0.75) {
+          const awayX = -enemy.position.x / (eDist || 1);
+          const awayZ = -enemy.position.z / (eDist || 1);
+          enemy.vel.x += awayX * 25 * dt;
+          enemy.vel.z += awayZ * 25 * dt;
+        }
 
         if (eDist > eEffRadius) {
           const enx = enemy.position.x / (eDist || 1);
@@ -130,7 +135,8 @@ export class Physics {
             if (this.audio) this.audio.playHit(true);
           }
 
-          const wallDamage = 10 * dt * (50 / (50 + enemy.stats.def));
+          // Enemies take MUCH less wall damage so they don't suicide
+          const wallDamage = 3 * dt * (50 / (50 + enemy.stats.def));
           enemy.takeDamage(wallDamage);
 
           if (this.particles && enemy.hp > 0) {
@@ -138,7 +144,6 @@ export class Physics {
           }
         }
 
-        // Player-Enemy collision
         if (this.player.hp > 0 && enemy.hp > 0) {
           const dx = enemy.position.x - this.player.position.x;
           const dz = enemy.position.z - this.player.position.z;
