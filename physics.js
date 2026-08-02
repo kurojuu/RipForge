@@ -28,26 +28,29 @@ export class Physics {
     defender.vel.x += (impulse / defender.mass) * nx;
     defender.vel.z += (impulse / defender.mass) * nz;
 
-    // Base damage from impact
-    const baseDamage = Math.abs(velAlongNormal) * 140 + 250;
+    // Base damage reduced for longer battles
+    const baseDamage = Math.abs(velAlongNormal) * 25 + 35;
     
-    // Apply stats: Att increases damage, Def reduces it
+    // Stats
     const attMult = attacker.stats.att / 50;
     const defMult = 50 / (50 + defender.stats.def);
     let rawDamage = baseDamage * attMult * defMult;
+    
+    // CHARGE MULTIPLIER: if attacker is moving toward defender, bonus damage
+    const chargeSpeed = Math.max(0, attacker.vel.x * nx + attacker.vel.z * nz);
+    const chargeMult = 1 + (chargeSpeed * 0.04); // up to ~1.4x at high speed
+    rawDamage *= chargeMult;
     
     // Apply move effects
     const result = applyMoveEffects(attacker, defender, rawDamage);
     const finalDamage = result.damage;
     
-    // Show move effect text
     if (result.effects.length > 0 && this.announcer) {
-      // Could show floating text here
       console.log(`[MOVE] ${result.moveName}: ${result.effects.join(", ")}`);
     }
     
     defender.takeDamage(finalDamage);
-    attacker.takeDamage(finalDamage * 0.3); // Recoil damage
+    attacker.takeDamage(finalDamage * 0.25); // Reduced recoil
 
     if (this.audio) this.audio.playHit(false);
     
@@ -86,8 +89,12 @@ export class Physics {
         if (this.audio) this.audio.playHit(true);
       }
 
-      // Wall damage scales with def (less def = more wall damage)
-      const wallDamage = 180 * dt * (50 / (50 + this.player.stats.def));
+      // WALL DAMAGE: extra if moving fast (missed charge)
+      const speed = Math.sqrt(this.player.vel.x**2 + this.player.vel.z**2);
+      const isCharging = speed > 4;
+      const baseWallDmg = isCharging ? (25 + speed * 6) : 8;
+      const wallDamage = baseWallDmg * dt * (50 / (50 + this.player.stats.def));
+      
       this.player.takeDamage(wallDamage);
 
       if (this.audio && this.player.hp > 0) this.audio.startGrind();
@@ -123,7 +130,7 @@ export class Physics {
             if (this.audio) this.audio.playHit(true);
           }
 
-          const wallDamage = 180 * dt * (50 / (50 + enemy.stats.def));
+          const wallDamage = 10 * dt * (50 / (50 + enemy.stats.def));
           enemy.takeDamage(wallDamage);
 
           if (this.particles && enemy.hp > 0) {
