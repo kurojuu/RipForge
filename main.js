@@ -92,9 +92,11 @@ export const Game = {
         this.state = new GameState(this.player, this.enemies, this.effects, this.audio, this.announcer);
         this.state.setBattleNumber(this.battleNumber);
 
+        // NEW:
         this.launcher.onLaunch = (rpm) => {
-            this.player.maxRPM = Math.max(3000, rpm);
-            this.player.rpm = this.player.maxRPM;
+            // Launcher only affects starting RPM (50-100% of your max)
+            const launchQuality = Math.min(Math.max(rpm / 4500, 0.5), 1.0);
+            this.player.rpm = Math.floor(this.player.maxRPM * launchQuality);
             this.isRoundStarted = true;
             this.state.start();
         };
