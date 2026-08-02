@@ -2,11 +2,11 @@
 export class Joystick {
   constructor() {
     this.active = false;
-    this.identifier = null; // touch identifier or "mouse"
+    this.identifier = null;
     
-    this.baseRadius = 60;
-    this.knobRadius = 25;
-    this.deadzone = 0.15;
+    this.baseRadius = 240;   // 4x larger
+    this.knobRadius = 100;   // 4x larger
+    this.deadzone = 0.12;
     
     this.centerX = 0;
     this.centerY = 0;
@@ -36,8 +36,8 @@ export class Joystick {
     this.container.id = "virtual-joystick";
     this.container.style.cssText = `
       position: fixed;
-      bottom: 20px;
-      left: 20px;
+      bottom: 30px;
+      left: 30px;
       width: ${this.baseRadius * 2}px;
       height: ${this.baseRadius * 2}px;
       z-index: 99999;
@@ -53,9 +53,9 @@ export class Joystick {
       top: 0; left: 0;
       width: 100%; height: 100%;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      border: 2px solid rgba(255, 255, 255, 0.25);
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+      background: rgba(255, 255, 255, 0.06);
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(4px);
     `;
     
@@ -68,9 +68,9 @@ export class Joystick {
       margin-left: -${this.knobRadius}px;
       margin-top: -${this.knobRadius}px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.35);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
       transition: transform 0.05s ease-out;
       pointer-events: none;
     `;
@@ -85,13 +85,11 @@ export class Joystick {
   }
   
   _attachEvents() {
-    // Touch
     this.container.addEventListener("touchstart", this._boundTouchStart, { passive: false });
     window.addEventListener("touchmove", this._boundTouchMove, { passive: false });
     window.addEventListener("touchend", this._boundTouchEnd, { passive: false });
     window.addEventListener("touchcancel", this._boundTouchEnd, { passive: false });
     
-    // Mouse
     this.container.addEventListener("mousedown", this._boundMouseDown);
     window.addEventListener("mousemove", this._boundMouseMove);
     window.addEventListener("mouseup", this._boundMouseUp);
@@ -114,17 +112,14 @@ export class Joystick {
   _updateKnob(dx, dy) {
     this.knob.style.transform = `translate(${dx}px, ${dy}px)`;
     
-    // Normalize to -1..1
     let nx = dx / this.baseRadius;
     let ny = dy / this.baseRadius;
     
-    // Apply deadzone
     const dist = Math.sqrt(nx * nx + ny * ny);
     if (dist < this.deadzone) {
       nx = 0;
       ny = 0;
     } else {
-      // Rescale so deadzone edge = 0, outer edge = 1
       const scale = (dist - this.deadzone) / (1 - this.deadzone);
       const ratio = scale / dist;
       nx *= ratio;
@@ -143,7 +138,6 @@ export class Joystick {
     this.outputY = 0;
   }
   
-  // --- Touch handlers ---
   _onTouchStart(e) {
     e.preventDefault();
     const touch = e.changedTouches[0];
@@ -184,7 +178,6 @@ export class Joystick {
     }
   }
   
-  // --- Mouse handlers ---
   _onMouseDown(e) {
     e.preventDefault();
     this.active = true;
@@ -211,7 +204,6 @@ export class Joystick {
     this._resetKnob();
   }
   
-  // --- Public API ---
   getInput() {
     return { x: this.outputX, y: this.outputY };
   }
