@@ -249,7 +249,7 @@ export class PlayerTop {
     const moveZ = window.Game?.input?.tiltY || 0;
     
     const agiMult = this.stats.agi / 50;
-    const accelRate = 22.0 * agiMult;
+    const accelRate = 14.0 * agiMult;
 
     this.vel.x += moveX * accelRate * dt;
     this.vel.z += moveZ * accelRate * dt;
