@@ -27,10 +27,7 @@ export const Game = {
     battleNumber: 1,
 
     async init() {
-      try {
-        console.log("[Game.init] Starting...");
         window.Game = this;
-        
         const canvas = document.getElementById("game");
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -47,48 +44,30 @@ export const Game = {
         dir.position.set(10, 20, 15);
         this.scene.add(dir);
 
-        console.log("[Game.init] Audio starting...");
         this.audio = new SFX();
         await this.audio.start();
 
-        console.log("[Game.init] Arena creating...");
         createArena(this.scene);
-
-        console.log("[Game.init] Showing blade select...");
         
-        // Try UI blade select first
-        if (typeof UI.showBladeSelect === 'function') {
-          UI.showBladeSelect((blade) => {
+        // Create input and joystick EARLY so they're ready before battle
+        this.input = new Input();
+        this.joystick = new Joystick();
+        this.input.requestPermission();
+
+        UI.showBladeSelect((blade) => {
             this.selectedBlade = blade;
             this.startBattle();
-          });
-        } else {
-          console.error("[Game.init] UI.showBladeSelect is missing! Falling back to prompt.");
-          // Emergency fallback
-          const names = STARTER_BLADES.map((b,i) => `${i+1}. ${b.name}`).join('\n');
-          const choice = parseInt(prompt(`Choose blade (enter 1-4):\n${names}`) || "1");
-          this.selectedBlade = STARTER_BLADES[Math.max(0, Math.min(3, choice - 1))];
-          this.startBattle();
-        }
-        
-        console.log("[Game.init] Init complete.");
-      } catch (err) {
-        console.error("[Game.init] FATAL ERROR:", err);
-        document.body.innerHTML += `<div style="position:fixed;top:10px;left:10px;background:#a00;color:#fff;padding:10px;z-index:99999;font-family:monospace;">ERROR: ${err.message}<br>Check console (F12)</div>`;
-      }
+        });
     },
 
     startBattle() {
-      try {
-        console.log("[Game.startBattle] Starting battle", this.battleNumber, "with blade", this.selectedBlade?.name);
-        
         if (this.player) {
-          this.scene.remove(this.player.mesh);
-          this.player = null;
+            this.scene.remove(this.player.mesh);
+            this.player = null;
         }
         if (this.enemies) {
-          this.enemies.list.forEach(e => { if(e?.mesh) this.scene.remove(e.mesh); });
-          this.enemies = null;
+            this.enemies.list.forEach(e => { if(e?.mesh) this.scene.remove(e.mesh); });
+            this.enemies = null;
         }
 
         this.player = new PlayerTop(this.scene, this.selectedBlade);
@@ -104,118 +83,115 @@ export const Game = {
         this.physics = new Physics(this.player, this.enemies);
 
         this.physics.setManagers({ 
-          particles: this.particles, 
-          audio: this.audio, 
-          announcer: this.announcer, 
-          replay: this.replay 
+            particles: this.particles, 
+            audio: this.audio, 
+            announcer: this.announcer, 
+            replay: this.replay 
         });
 
         this.state = new GameState(this.player, this.enemies, this.effects, this.audio, this.announcer);
         this.state.setBattleNumber(this.battleNumber);
 
         this.launcher.onLaunch = (rpm) => {
-          this.player.maxRPM = Math.max(3000, rpm);
-          this.player.rpm = this.player.maxRPM;
-          this.isRoundStarted = true;
-          this.state.start();
+            this.player.maxRPM = Math.max(3000, rpm);
+            this.player.rpm = this.player.maxRPM;
+            this.isRoundStarted = true;
+            this.state.start();
         };
 
         this.launcher.start();
         UI.init(this.player, this.enemies);
-        this.input = new Input();
-        this.joystick = new Joystick();
-        this.input.requestPermission();
 
         window.addEventListener("resize", () => {
-          this.camera.aspect = window.innerWidth / window.innerHeight;
-          this.camera.updateProjectionMatrix();
-          this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
         this.isRoundStarted = false;
         this.loop();
-      } catch (err) {
-        console.error("[Game.startBattle] ERROR:", err);
-      }
     },
 
     rematch() {
-      UI.endScreenShown = false;
-      this.startBattle();
+        UI.endScreenShown = false;
+        this.startBattle();
     },
 
     nextBattle() {
-      this.battleNumber++;
-      UI.endScreenShown = false;
-      this.startBattle();
+        this.battleNumber++;
+        UI.endScreenShown = false;
+        this.startBattle();
     },
 
     loop() {
-      requestAnimationFrame(() => this.loop());
-      const dt = Math.min(this.clock.getDelta(), 0.033);
+        requestAnimationFrame(() => this.loop());
+        const dt = Math.min(this.clock.getDelta(), 0.033);
 
-      if (this.launcher?.running) this.launcher.update(dt);
-      
-      if (this.replay?.playing) {
-        this.replay.update(this.player, this.enemies);
-        this.renderer.render(this.scene, this.camera);
-        return;
-      }
-
-      if (this.player?.mesh && this.player?.position) {
-        this.player.mesh.position.copy(this.player.position);
-      }
-      if (this.enemies?.list) {
-        for (let i = 0; i < this.enemies.list.length; i++) {
-          const e = this.enemies.list[i];
-          if (e?.mesh && e?.position) e.mesh.position.copy(e.position);
-        }
-      }
-      this.cameraRig?.update(dt);
-
-      if (this.joystick && this.joystick.active) {
-        const j = this.joystick.getInput();
-        this.input.tiltX = j.x;
-        this.input.tiltY = j.y;
-      }
-
-      if (this.isRoundStarted && this.state && !this.state.isFinished()) {
-        this.player?.update(dt);
-        this.enemies?.update(dt);
-        this.physics?.update(dt);
-
-        if (this.player?.hp > 0) {
-          this.particles?.emitTrail(this.player, this.particles.trailForRPM(this.player.rpm));
-          this.audio?.updateMotorRPM?.(this.player.rpm, this.player.maxRPM);
+        // JOYSTICK: always active, even before battle starts
+        if (this.joystick && this.joystick.active) {
+            const j = this.joystick.getInput();
+            this.input.tiltX = j.x;
+            this.input.tiltY = j.y;
         }
 
+        if (this.launcher?.running) this.launcher.update(dt);
+        
+        if (this.replay?.playing) {
+            this.replay.update(this.player, this.enemies);
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
+        // Visual sync
+        if (this.player?.mesh && this.player?.position) {
+            this.player.mesh.position.copy(this.player.position);
+        }
         if (this.enemies?.list) {
-          for (let i = 0; i < this.enemies.list.length; i++) {
-            const e = this.enemies.list[i];
-            if (e?.hp > 0) {
-              this.particles?.emitTrail(e, this.particles.trailForRPM(e.rpm));
+            for (let i = 0; i < this.enemies.list.length; i++) {
+                const e = this.enemies.list[i];
+                if (e?.mesh && e?.position) e.mesh.position.copy(e.position);
             }
-          }
+        }
+        this.cameraRig?.update(dt);
+
+        // Game logic
+        if (this.isRoundStarted && this.state && !this.state.isFinished()) {
+            this.player?.update(dt);
+            this.enemies?.update(dt);
+            this.physics?.update(dt);
+
+            if (this.player?.hp > 0) {
+                this.particles?.emitTrail(this.player, this.particles.trailForRPM(this.player.rpm));
+                this.audio?.updateMotorRPM?.(this.player.rpm, this.player.maxRPM);
+            }
+
+            if (this.enemies?.list) {
+                for (let i = 0; i < this.enemies.list.length; i++) {
+                    const e = this.enemies.list[i];
+                    if (e?.hp > 0) {
+                        this.particles?.emitTrail(e, this.particles.trailForRPM(e.rpm));
+                    }
+                }
+            }
+
+            this.particles?.update(dt);
+            this.powerups?.update(dt);
+            this.effects?.update(dt);
+            this.replay?.record(this.player, this.enemies);
+            this.state?.update();
         }
 
-        this.particles?.update(dt);
-        this.powerups?.update(dt);
-        this.effects?.update(dt);
-        this.replay?.record(this.player, this.enemies);
-        this.state?.update();
-      }
+        if (this.isRoundStarted && this.state && !this.state.isFinished() && this.player && this.player.hp <= 0) {
+            this.state.forceDefeat();
+        }
 
-      if (this.isRoundStarted && this.state && !this.state.isFinished() && this.player && this.player.hp <= 0) {
-        this.state.forceDefeat();
-      }
-
-      UI.update();
-      this.renderer.render(this.scene, this.camera);
+        UI.update();
+        this.renderer.render(this.scene, this.camera);
     }
 };
 
 const btn = document.getElementById("startBtn");
 if (btn) btn.onclick = async () => { 
-  btn.remove(); 
-  await Game.init(); 
+    btn.remove(); 
+    await Game.init(); 
 };
