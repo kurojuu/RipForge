@@ -1,4 +1,6 @@
 // announcer.js
+import { ANNOUNCER_LINES, randomLine } from "./constants.js";
+
 export class Announcer {
   constructor() {
     this.synth = typeof window !== 'undefined' && window.speechSynthesis;
@@ -47,7 +49,6 @@ export class Announcer {
     if (!priority && now - this.lastLine < 3000) return;
     this.lastLine = now;
     
-    // Non-blocking: defer speech to next tick so it never stalls the game loop
     setTimeout(() => {
       try {
         this.synth.cancel();
@@ -63,17 +64,16 @@ export class Announcer {
     }, 0);
   }
 
-  letItRip() { this.say("LET IT RIP!", true); }
-  intro(enemyCount) { this.say(enemyCount === 1 ? "One opponent enters the steel circle!" : `${enemyCount} enemies challenge you!`, true); }
-  bigHit() {
-    const lines = ["BOOM! Brutal hit!", "Crushing collision!", "Massive strike!"];
-    this.say(lines[Math.floor(Math.random() * lines.length)]);
+  letItRip() { this.say(randomLine(ANNOUNCER_LINES.LET_IT_RIP), true); }
+  intro(enemyCount) { 
+    this.say(enemyCount === 1 ? "One opponent enters the steel circle!" : `${enemyCount} enemies challenge you!`, true); 
   }
-  playerLow() { this.say("Danger! Your spin power is critical!"); }
-  enemyLow() { this.say("The enemy is staggering!"); }
-  oneEnemyLeft() { this.say("Final showdown! One enemy remains!"); }
-  comeback() { this.say("Unbelievable surge!"); }
-  victory() { this.say("VICTORY! YOU DOMINATED THE ARENA!", true); }
-  defeat() { this.say("DEFEAT! Break down and rebuild!", true); }
+  bigHit() { this.say(randomLine(ANNOUNCER_LINES.BIG_HIT)); }
+  playerLow() { this.say(randomLine(ANNOUNCER_LINES.LOW_PLAYER)); }
+  enemyLow() { this.say(randomLine(ANNOUNCER_LINES.LOW_ENEMY)); }
+  oneEnemyLeft() { this.say(randomLine(ANNOUNCER_LINES.ONE_LEFT)); }
+  comeback() { this.say(randomLine(ANNOUNCER_LINES.COMEBACK)); }
+  victory() { this.say(randomLine(ANNOUNCER_LINES.VICTORY), true); }
+  defeat() { this.say(randomLine(ANNOUNCER_LINES.DEFEAT), true); }
   draw() { this.say("Draw! Mutual destruction!", true); }
 }
