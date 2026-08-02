@@ -10,7 +10,7 @@ export class Launcher {
     this.lastX = null;
     this.lastY = null;
     this.lastZ = null;
-    this.threshold = 15;
+    this.threshold = 8;
   }
 
   start() {
@@ -71,7 +71,7 @@ export class Launcher {
       if (overlay) overlay.remove();
 
       // Calculate final input RPM baseline based on movement tracking metrics
-      const calculatedRPM = 3000 + Math.min(this.shakeCount * 45, 1500);
+      const calculatedRPM = 3500 + Math.min(this.shakeCount * 60, 2000); // 3500–5500 range
       
       if (this.onLaunch) {
         this.onLaunch(calculatedRPM);
