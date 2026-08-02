@@ -162,7 +162,7 @@ export const Game = {
             this.enemies?.update(dt);
             this.physics?.update(dt);
 
-            if (this.player?.hp > 0) {
+            if (this.player?.rpm > 0) {
                 this.particles?.emitTrail(this.player, this.particles.trailForRPM(this.player.rpm));
                 this.audio?.updateMotorRPM?.(this.player.rpm, this.player.maxRPM);
             }
@@ -170,7 +170,7 @@ export const Game = {
             if (this.enemies?.list) {
                 for (let i = 0; i < this.enemies.list.length; i++) {
                     const e = this.enemies.list[i];
-                    if (e?.hp > 0) {
+                    if (e?.rpm > 0) {
                         this.particles?.emitTrail(e, this.particles.trailForRPM(e.rpm));
                     }
                 }
@@ -183,7 +183,7 @@ export const Game = {
             this.state?.update();
         }
 
-        if (this.isRoundStarted && this.state && !this.state.isFinished() && this.player && this.player.hp <= 0) {
+        if (this.isRoundStarted && this.state && !this.state.isFinished() && this.player && this.player.rpm <= 0) {
             this.state.forceDefeat();
         }
 
