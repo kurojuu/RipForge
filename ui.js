@@ -1,6 +1,6 @@
 // ui.js
 import { Game } from "./main.js";
-import { STARTER_BLADES, PART_SLOTS, calculateStats, getStatDiff, getTotalStats } from "./blades.js";
+import { STARTER_BLADES, PART_SLOTS, calculateStats } from "./blades.js";
 
 export const UI = {
   playerRPMText: null,
@@ -15,7 +15,11 @@ export const UI = {
 
   init(player, enemies) {
     const hud = document.getElementById("hud");
-    if (!hud) return;
+    if (!hud) {
+      console.error("[UI] hud element not found!");
+      return;
+    }
+    
     hud.innerHTML = `
       <div style="position:absolute;top:20px;left:20px;background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;color:#fff;font-family:sans-serif;min-width:160px;">
         <div style="font-size:12px;font-weight:bold;margin-bottom:5px;letter-spacing:1px;">YOUR HP</div>
@@ -28,11 +32,17 @@ export const UI = {
       <div id="enemyUi" style="position:absolute;top:20px;right:20px;display:flex;flex-direction:column;gap:10px;background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;color:#fff;font-family:sans-serif;min-width:160px;">
       </div>
     `;
+
     this.playerRPMText = document.getElementById("pRPM");
     this.playerBar = document.getElementById("pBar");
     this.enemyContainer = document.getElementById("enemyUi");
     this.messageEl = document.getElementById("message");
     this.playerStats = document.getElementById("pStats");
+
+    if (!this.messageEl) {
+      console.error("[UI] message element not found!");
+    }
+
     this.buildEnemyUI(enemies.list);
   },
 
@@ -55,13 +65,16 @@ export const UI = {
 
   update() {
     if (!Game.player || !this.playerBar || !this.playerRPMText) return;
+    
     const pPct = Math.max(0, Game.player.hp / Game.player.maxHp) * 100;
     this.playerBar.style.width = `${pPct}%`;
     this.playerRPMText.innerText = `${Math.floor(Game.player.hp)} / ${Game.player.maxHp} HP`;
+    
     if (this.playerStats && Game.player.stats) {
       const s = Game.player.stats;
       this.playerStats.innerText = `ATT:${s.att} DEF:${s.def} AGI:${s.agi} HP:${s.hp}`;
     }
+
     if (pPct < 30) this.playerBar.style.background = "#ff3d00";
     else if (pPct < 60) this.playerBar.style.background = "#ffea00";
     else this.playerBar.style.background = "#00e676";
@@ -85,7 +98,10 @@ export const UI = {
 
   showBladeSelect(onSelect) {
     const msg = this._getMessageEl();
-    if (!msg) return;
+    if (!msg) {
+      console.error("[UI] Cannot show blade select — no message element");
+      return;
+    }
     msg.style.display = "block";
     msg.innerHTML = `
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.92);padding:30px;border-radius:15px;text-align:center;font-family:sans-serif;border:2px solid #00e676;min-width:320px;max-width:90vw;z-index:100000;">
@@ -93,24 +109,35 @@ export const UI = {
         <div id="bladeCards" style="display:flex;flex-direction:column;gap:12px;"></div>
       </div>
     `;
+
     const container = document.getElementById("bladeCards");
     STARTER_BLADES.forEach(blade => {
       const card = document.createElement("div");
-      card.style.cssText = "background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:15px;cursor:pointer;text-align:left;transition:all 0.2s;";
+      card.style.cssText = `
+        background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);
+        border-radius:10px;padding:15px;cursor:pointer;text-align:left;
+        transition:all 0.2s;
+      `;
       const hexColor = "#" + blade.color.toString(16).padStart(6, '0');
       card.innerHTML = `
         <div style="font-size:18px;font-weight:bold;color:${hexColor};">${blade.name}</div>
         <div style="font-size:11px;color:#aaa;margin:4px 0;">${blade.desc}</div>
-        <div style="font-size:12px;color:#fff;">ATT: ${blade.baseStats.att} | DEF: ${blade.baseStats.def} | AGI: ${blade.baseStats.agi} | HP: ${blade.baseStats.hp}</div>
+        <div style="font-size:12px;color:#fff;">
+          ATT: ${blade.baseStats.att} | DEF: ${blade.baseStats.def} | AGI: ${blade.baseStats.agi} | HP: ${blade.baseStats.hp}
+        </div>
       `;
       card.onmouseenter = () => card.style.background = "rgba(255,255,255,0.12)";
       card.onmouseleave = () => card.style.background = "rgba(255,255,255,0.05)";
-      card.onclick = () => { msg.innerHTML = ""; msg.style.display = "none"; this.endScreenShown = false; onSelect(blade); };
+      card.onclick = () => {
+        msg.innerHTML = "";
+        msg.style.display = "none";
+        this.endScreenShown = false;
+        onSelect(blade);
+      };
       container.appendChild(card);
     });
   },
 
-  // REWARD CHOICE: Pick 1 of 3 parts after victory
   showRewardChoice(choices, tier, onDone) {
     const msg = this._getMessageEl();
     if (!msg) { onDone(); return; }
@@ -129,7 +156,6 @@ export const UI = {
       const card = document.createElement("div");
       card.style.cssText = "background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:15px;cursor:pointer;text-align:left;transition:all 0.2s;display:flex;align-items:center;gap:15px;";
       
-      // 3D color preview
       const hexColor = "#" + part.color.toString(16).padStart(6, '0');
       
       card.innerHTML = `
@@ -154,7 +180,6 @@ export const UI = {
     });
   },
 
-  // DRAG & DROP PART SHOP
   showPartShop(player, battleNumber, onDone) {
     const msg = this._getMessageEl();
     if (!msg) return;
@@ -164,14 +189,11 @@ export const UI = {
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);padding:20px;border-radius:15px;text-align:center;font-family:sans-serif;border:2px solid #00a2ff;min-width:360px;max-width:98vw;z-index:100000;max-height:95vh;overflow-y:auto;">
         <h1 style="color:#00a2ff;font-size:22px;margin:0 0 10px 0;">WORKSHOP</h1>
         
-        <!-- Total Stats Panel -->
         <div id="totalStats" style="background:rgba(0,162,255,0.1);border-radius:8px;padding:10px;margin-bottom:15px;font-size:13px;color:#fff;"></div>
         
-        <!-- Equipped Slots -->
         <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#aaa;">EQUIPPED</div>
         <div id="equipSlots" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:15px;"></div>
         
-        <!-- Inventory -->
         <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#aaa;">INVENTORY (${player.inventory.length})</div>
         <div id="inventoryGrid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:60px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px dashed rgba(255,255,255,0.2);margin-bottom:15px;"></div>
         
@@ -235,7 +257,6 @@ export const UI = {
           transition: all 0.2s;
         `;
         
-        // Drop handlers
         slotEl.ondragover = (e) => { e.preventDefault(); slotEl.style.borderColor = "#00e676"; slotEl.style.background = "rgba(0,230,118,0.1)"; };
         slotEl.ondragleave = () => { slotEl.style.borderColor = "rgba(255,255,255,0.3)"; slotEl.style.background = "rgba(255,255,255,0.05)"; };
         slotEl.ondrop = (e) => {
@@ -250,7 +271,6 @@ export const UI = {
           }
         };
         
-        // Click to unequip
         if (equipped) {
           slotEl.style.border = "2px solid #" + equipped.color.toString(16).padStart(6,'0') + "88";
           slotEl.innerHTML = `
@@ -301,6 +321,7 @@ export const UI = {
   showEndScreen(text, isVictory, battleNumber, newParts = [], isNewTier = false) {
     if (this.endScreenShown) return;
     this.endScreenShown = true;
+
     const msg = this._getMessageEl();
     if (!msg) return;
     msg.style.display = "block";
