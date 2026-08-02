@@ -36,7 +36,7 @@ export class GameState {
 
   cleanup() {
     try { this.audio?.stopMotor?.(); } catch (e) {}
-    if (this.player) this.player.hp = 0;
+    if (this.player) this.player.rpm = 0;
   }
 
   forceDefeat() {
@@ -50,6 +50,7 @@ export class GameState {
   update() {
     if (this.current !== "battle" || this.finished) return;
 
+    // ABSOLUTE PRIORITY: if player is dead, it's always defeat
     if (this.player.hp <= 0) {
       this.forceDefeat();
       return;
@@ -62,12 +63,12 @@ export class GameState {
       }
     }
 
+    // Victory ONLY if player is alive AND all enemies dead
     if (activeEnemies === 0) {
       this.cleanup();
       this.finished = true;
       this.current = "victory";
       
-      // Unlock new parts
       const newParts = getUnlockedParts(this.battleNumber).filter(p => 
         !this.unlockedParts.some(up => up.id === p.id)
       );
