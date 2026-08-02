@@ -8,16 +8,18 @@ export class EnemyTop {
     this.radius = 0.6;
     
     // Scale based on battle AND player power
-    const battleScale = 1 + (battleNumber - 1) * 0.25;
-    const playerScale = playerTotalStats ? 
-      (playerTotalStats.att + playerTotalStats.def + playerTotalStats.agi + playerTotalStats.hp) / 1200 : 1;
+    const battleScale = 1 + (battleNumber - 1) * 0.2;
+    const playerTotal = playerTotalStats 
+    ? (playerTotalStats.att + playerTotalStats.def + playerTotalStats.agi + playerTotalStats.hp) 
+    : 1000;
+    const playerScale = playerTotal / 900;
     const finalScale = battleScale * Math.max(1.0, playerScale);
     
     this.stats = {
-      att: Math.floor(50 * finalScale),
-      def: Math.floor(45 * finalScale),
-      agi: Math.floor(55 * finalScale),
-      hp: Math.floor(480 * finalScale)
+        att: Math.floor(55 * finalScale),
+        def: Math.floor(50 * finalScale),
+        agi: Math.floor(60 * finalScale),
+        hp: Math.floor(600 * finalScale)
     };
     
     this.hp = this.stats.hp;
@@ -98,8 +100,8 @@ export class EnemyTop {
       const agiMult = this.stats.agi / 50;
       
       if (dist > 0.1) {
-        this.vel.x += (dx / dist) * 12 * agiMult * dt;
-        this.vel.z += (dz / dist) * 10 * agiMult * dt;
+        this.vel.x += (dx / dist) * 14 * agiMult * dt;
+        this.vel.z += (dz / dist) * 14 * agiMult * dt;
       }
       
       if (dist < 3 && dist > 0.1) {
