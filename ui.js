@@ -9,6 +9,10 @@ export const UI = {
   messageEl: null,
   endScreenShown: false,
 
+  _getMessageEl() {
+    return this.messageEl || document.getElementById("message");
+  },
+
   init(player, enemies) {
     const hud = document.getElementById("hud");
     if (!hud) {
@@ -93,9 +97,13 @@ export const UI = {
   },
 
   showBladeSelect(onSelect) {
-    if (!this.messageEl) return;
-    this.messageEl.style.display = "block";
-    this.messageEl.innerHTML = `
+    const msg = this._getMessageEl();
+    if (!msg) {
+      console.error("[UI] Cannot show blade select — no message element");
+      return;
+    }
+    msg.style.display = "block";
+    msg.innerHTML = `
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.92);padding:30px;border-radius:15px;text-align:center;font-family:sans-serif;border:2px solid #00e676;min-width:320px;max-width:90vw;z-index:100000;">
         <h1 style="color:#00e676;font-size:28px;margin:0 0 20px 0;">CHOOSE YOUR BLADE</h1>
         <div id="bladeCards" style="display:flex;flex-direction:column;gap:12px;"></div>
@@ -121,8 +129,8 @@ export const UI = {
       card.onmouseenter = () => card.style.background = "rgba(255,255,255,0.12)";
       card.onmouseleave = () => card.style.background = "rgba(255,255,255,0.05)";
       card.onclick = () => {
-        this.messageEl.innerHTML = "";
-        this.messageEl.style.display = "none";
+        msg.innerHTML = "";
+        msg.style.display = "none";
         this.endScreenShown = false;
         onSelect(blade);
       };
@@ -131,11 +139,12 @@ export const UI = {
   },
 
   showPartShop(player, battleNumber, onDone) {
-    if (!this.messageEl) return;
+    const msg = this._getMessageEl();
+    if (!msg) return;
     const unlocked = getUnlockedParts(battleNumber);
     
-    this.messageEl.style.display = "block";
-    this.messageEl.innerHTML = `
+    msg.style.display = "block";
+    msg.innerHTML = `
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.92);padding:25px;border-radius:15px;text-align:center;font-family:sans-serif;border:2px solid #00a2ff;min-width:340px;max-width:95vw;z-index:100000;max-height:90vh;overflow-y:auto;">
         <h1 style="color:#00a2ff;font-size:24px;margin:0 0 15px 0;">CUSTOMIZE BLADE</h1>
         <div style="font-size:12px;color:#aaa;margin-bottom:15px;">Battle ${battleNumber} — Equip parts to boost stats</div>
@@ -201,8 +210,8 @@ export const UI = {
     renderInventory();
 
     document.getElementById("doneBtn").onclick = () => {
-      this.messageEl.innerHTML = "";
-      this.messageEl.style.display = "none";
+      msg.innerHTML = "";
+      msg.style.display = "none";
       this.endScreenShown = false;
       onDone();
     };
@@ -212,9 +221,10 @@ export const UI = {
     if (this.endScreenShown) return;
     this.endScreenShown = true;
 
-    if (!this.messageEl) return;
-    this.messageEl.style.display = "block";
-    this.messageEl.className = "";
+    const msg = this._getMessageEl();
+    if (!msg) return;
+    msg.style.display = "block";
+    msg.className = "";
 
     const btnText = isVictory ? "NEXT BATTLE" : "REMATCH?";
     const btnColor = isVictory ? "#00e676" : "#ff3d00";
@@ -232,7 +242,7 @@ export const UI = {
       `;
     }
 
-    this.messageEl.innerHTML = `
+    msg.innerHTML = `
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:35px;border-radius:15px;text-align:center;font-family:sans-serif;border:2px solid ${borderColor};box-shadow:0 0 20px rgba(0,0,0,0.5);min-width:300px;z-index:100000;">
         <h1 style="color:${borderColor};font-size:38px;margin:0 0 10px 0;letter-spacing:2px;text-transform:uppercase;">${text}</h1>
         <p style="color:#aaa;font-size:14px;margin:0 0 20px 0;">Battle ${battleNumber} Complete</p>
@@ -247,7 +257,7 @@ export const UI = {
     `;
 
     document.getElementById("actionBtn").onclick = () => {
-      this.messageEl.innerHTML = "";
+      msg.innerHTML = "";
       if (window.Game) {
         if (isVictory) {
           window.Game.nextBattle();
