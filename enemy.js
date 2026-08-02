@@ -8,10 +8,10 @@ export class EnemyTop {
     this.radius = 0.6;
     
     // Scale based on battle AND player power
-    const battleScale = 1 + (battleNumber - 1) * 0.12;
+    const battleScale = 1 + (battleNumber - 1) * 0.25;
     const playerScale = playerTotalStats ? 
       (playerTotalStats.att + playerTotalStats.def + playerTotalStats.agi + playerTotalStats.hp) / 1200 : 1;
-    const finalScale = battleScale * Math.max(0.85, playerScale);
+    const finalScale = battleScale * Math.max(1.0, playerScale);
     
     this.stats = {
       att: Math.floor(50 * finalScale),
