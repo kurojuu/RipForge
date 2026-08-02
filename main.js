@@ -128,7 +128,7 @@ export const Game = {
 	    const j = this.joystick.getInput();
 	    // Invert Y because screen Y is down but game Z is forward
 	    this.input.tiltX = j.x;
-	    this.input.tiltY = -j.y;
+	    this.input.tiltY = j.y;
 	}
 
         // Game logic
